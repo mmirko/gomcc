@@ -1,6 +1,6 @@
 syntax = "proto3";
 option go_package = "./gomcc";
-package brvga;
+package gomcc;
 
 message Textmemupdate {
   uint32 cpid = 1;
