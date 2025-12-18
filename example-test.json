@@ -1,0 +1,31 @@
+{
+  "apps": [
+    {
+      "name": "check_success",
+      "type": "check",
+      "command": "./test-check-success.sh",
+      "tags": ["test"]
+    },
+    {
+      "name": "check_failure",
+      "type": "check",
+      "command": "./test-check-failure.sh",
+      "tags": ["test"]
+    },
+    {
+      "name": "conditional_app",
+      "type": "executable",
+      "command": "echo",
+      "args": ["default"],
+      "dependencies": {
+        "check_success": {
+          "on_success": "echo 'Success path executed!'"
+        },
+        "check_failure": {
+          "on_failure": "echo 'Failure path executed!'"
+        }
+      },
+      "tags": ["test"]
+    }
+  ]
+}

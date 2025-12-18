@@ -1,0 +1,30 @@
+{
+  "apps": [
+    {
+      "name": "checkonhostA",
+      "type": "check",
+      "command": "checkonhostAcommand",
+      "tags": ["hostA"]
+    },
+    {
+      "name": "checkonhostB",
+      "type": "check",
+      "command": "checkonhostBcommand",
+      "tags": ["hostB"]
+    },
+    {
+      "name": "startprogramtest",
+      "type": "executable",
+      "command": "startprogramtest",
+      "dependencies": {
+        "checkonhostA": {
+          "on_success": "startprogramtest"
+        },
+        "checkonhostB": {
+          "on_success": "ssh hostB startprogramtest"
+        }
+      },
+      "tags": ["program", "test"]
+    }
+  ]
+}

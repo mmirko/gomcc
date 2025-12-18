@@ -1,0 +1,98 @@
+{
+  "apps": [
+    {
+      "name": "check_docker",
+      "type": "check",
+      "command": "docker",
+      "args": ["info"],
+      "tags": ["infrastructure", "docker"]
+    },
+    {
+      "name": "check_network",
+      "type": "check",
+      "command": "ping",
+      "args": ["-c", "1", "8.8.8.8"],
+      "tags": ["infrastructure", "network"]
+    },
+    {
+      "name": "check_local_host",
+      "type": "check",
+      "command": "sh",
+      "args": ["-c", "[ \"$HOSTNAME\" = \"localhost\" ]"],
+      "tags": ["environment"]
+    },
+    {
+      "name": "check_remote_host",
+      "type": "check",
+      "command": "sh",
+      "args": ["-c", "[ \"$HOSTNAME\" = \"remote-server\" ]"],
+      "tags": ["environment"]
+    },
+    {
+      "name": "database",
+      "type": "executable",
+      "command": "docker",
+      "args": ["run", "-d", "--name", "mydb", "-e", "POSTGRES_PASSWORD=secret", "postgres:14"],
+      "dependencies": {
+        "check_docker": {
+          "on_success": "docker run -d --name mydb -e POSTGRES_PASSWORD=secret postgres:14"
+        }
+      },
+      "tags": ["backend", "database", "production"]
+    },
+    {
+      "name": "redis_cache",
+      "type": "executable",
+      "command": "docker",
+      "args": ["run", "-d", "--name", "redis", "redis:7"],
+      "dependencies": {
+        "check_docker": {
+          "on_success": "docker run -d --name redis redis:7"
+        }
+      },
+      "tags": ["backend", "cache", "production"]
+    },
+    {
+      "name": "api_server",
+      "type": "executable",
+      "command": "/opt/myapp/api-server",
+      "dependencies": {
+        "check_local_host": {
+          "on_success": "/opt/myapp/api-server --port 3000"
+        },
+        "check_remote_host": {
+          "on_success": "ssh remote-server /opt/myapp/api-server --port 3000"
+        }
+      },
+      "tags": ["backend", "api", "production"]
+    },
+    {
+      "name": "web_frontend",
+      "type": "executable",
+      "command": "nginx",
+      "args": ["-c", "/etc/nginx/nginx.conf"],
+      "tags": ["frontend", "web", "production"]
+    },
+    {
+      "name": "monitoring",
+      "type": "executable",
+      "command": "prometheus",
+      "args": ["--config.file=/etc/prometheus/prometheus.yml"],
+      "tags": ["monitoring", "production"]
+    },
+    {
+      "name": "dev_server",
+      "type": "executable",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "tags": ["development", "frontend"]
+    },
+    {
+      "name": "test_runner",
+      "type": "executable",
+      "command": "pytest",
+      "args": ["-v"],
+      "tags": ["development", "testing"]
+    }
+  ]
+}
