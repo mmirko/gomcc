@@ -1,6 +1,7 @@
-# gomcc - Go Multi-Component Commander
+# gomcc - Go Multi-Component Launcher
 
 A flexible CLI launcher for managing application dependencies and conditional execution based on check results.
+The project is the AI re-implementation of an old python tool called "mcc" that I wrote several years ago.
 
 ## Features
 
