@@ -13,6 +13,7 @@ A flexible CLI launcher for managing application dependencies and conditional ex
 - **Tag-Based Filtering**: Organize and filter apps using tags
 
 - **Multiple Execution Modes**:
+  - List all executable apps
   - Launch all apps
   - Launch apps by tag(s)
   - Launch a specific app
@@ -82,7 +83,9 @@ The configuration file is a JSON file that defines all apps and their dependenci
 ### Command-Line Options
 
 ```
--f <path>       Path to the JSON configuration file (required)
+-f <path>       Path to the JSON configuration file (default: ~/.gomcc.json)
+-l              List executable app names (one per line)
+-L              List all executable apps with detailed information
 -t <tags>       Comma-separated list of tags to filter apps
 -v              Enable verbose mode
 -d              Enable debug mode (implies verbose)
@@ -94,51 +97,74 @@ The configuration file is a JSON file that defines all apps and their dependenci
 
 ### Examples
 
-#### 1. Launch All Apps
+#### 1. List Executable Apps
 
 ```bash
+# List app names only (one per line)
+gomcc -l
+
+# List with detailed information
+gomcc -L
+
+# List from specific config
+gomcc -f config.json -l
+
+# List with details from specific config
+gomcc -f config.json -L
+
+# List apps filtered by tags
+gomcc -l -t web,backend
+```
+
+#### 2. Launch All Apps
+
+```bash
+# Using default config (~/.gomcc.json)
+gomcc
+
+# Using specific config
 gomcc -f config.json
 ```
 
-#### 2. Launch Apps with Specific Tags
+#### 3. Launch Apps with Specific Tags
 
 ```bash
 # Launch apps tagged with 'web' or 'backend'
 gomcc -f config.json -t web,backend
 ```
 
-#### 3. Launch a Specific App
+#### 4. Launch a Specific App
 
 ```bash
 gomcc -f config.json -c myapp
 ```
 
-#### 4. Launch All Apps with a Specific Tag
+#### 5. Launch All Apps with a Specific Tag
 
 ```bash
 gomcc -f config.json -g production
 ```
 
-#### 5. Test a Check App
+#### 6. Test a Check App
 
 ```bash
 gomcc -f config.json -e checkapp
 ```
 
-#### 6. Dry-Run Mode
+#### 7. Dry-Run Mode
 
 ```bash
 # See what would be executed without running anything
 gomcc -f config.json -r
 ```
 
-#### 7. Verbose Mode
+#### 8. Verbose Mode
 
 ```bash
 gomcc -f config.json -v
 ```
 
-#### 8. Debug Mode
+#### 9. Debug Mode
 
 ```bash
 gomcc -f config.json -d

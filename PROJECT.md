@@ -54,7 +54,9 @@
 - Group-based launching
 
 ### 5. CLI Options
-- `-f` - Configuration file path (required)
+- `-f` - Configuration file path (default: ~/.gomcc.json)
+- `-l` - List executable app names (one per line)
+- `-L` - List all executable apps with detailed information
 - `-t` - Filter by tags (comma-separated)
 - `-v` - Verbose mode
 - `-d` - Debug mode
@@ -74,6 +76,8 @@
 - Proper exit code handling
 
 ### 8. Additional Features
+- List executable apps with resolved commands
+- Default configuration file support (~/.gomcc.json)
 - Check result caching
 - Configuration validation
 - Comprehensive error handling

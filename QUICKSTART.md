@@ -64,12 +64,33 @@ sudo cp gomcc /usr/local/bin/
 2. Define check apps for validations
 3. Define executable apps with optional dependencies
 4. Use tags for organization
-5. Test with dry-run mode first: `./gomcc -f yourconfig.json -r -v`
+5. (Optional) Copy your config to `~/.gomcc.json` to use as default
+6. Test with dry-run mode first: `./gomcc -f yourconfig.json -r -v`
+7. List executables to verify: `./gomcc -f yourconfig.json -l` (names) or `-L` (details)
 
 ## Common Usage Patterns
 
+### List Executable Apps
+```bash
+# List app names only (one per line)
+gomcc -l
+
+# List with detailed information
+gomcc -L
+
+# List from specific config
+gomcc -f config.json -l
+
+# List with tag filter
+gomcc -l -t tag1,tag2
+```
+
 ### Launch All Apps
 ```bash
+# Using default config (~/.gomcc.json)
+gomcc
+
+# Using specific config
 gomcc -f config.json
 ```
 
@@ -100,6 +121,8 @@ gomcc -f config.json -d -r
 
 ## Tips
 
+- Use `-l` to list app names or `-L` for detailed listing
+- Default config file is `~/.gomcc.json` (no need for `-f` flag)
 - Always test with `-r` (dry-run) first
 - Use `-v` or `-d` for detailed logging
 - Check apps are cached during execution

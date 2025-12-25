@@ -4,24 +4,34 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 // CLI represents the command-line interface
 type CLI struct {
-	configPath string
-	tags       string
-	verbose    bool
-	debug      bool
-	dryRun     bool
-	appName    string
-	groupTag   string
-	checkApp   string
+	configPath        string
+	tags              string
+	verbose           bool
+	debug             bool
+	dryRun            bool
+	appName           string
+	groupTag          string
+	checkApp          string
+	listApps          bool
+	listAppsDetailed  bool
 }
 
 // ParseArgs parses command-line arguments
 func (c *CLI) ParseArgs() {
-	flag.StringVar(&c.configPath, "f", "", "Path to the JSON configuration file (required)")
+	// Get default config path
+	homeDir, err := os.UserHomeDir()
+	defaultConfig := ""
+	if err == nil {
+		defaultConfig = filepath.Join(homeDir, ".gomcc.json")
+	}
+	
+	flag.StringVar(&c.configPath, "f", defaultConfig, "Path to the JSON configuration file")
 	flag.StringVar(&c.tags, "t", "", "Comma-separated list of tags to filter apps")
 	flag.BoolVar(&c.verbose, "v", false, "Enable verbose mode")
 	flag.BoolVar(&c.debug, "d", false, "Enable debug mode (implies verbose)")
@@ -29,6 +39,8 @@ func (c *CLI) ParseArgs() {
 	flag.StringVar(&c.appName, "c", "", "Launch a specific app by name")
 	flag.StringVar(&c.groupTag, "g", "", "Launch all apps with a specific tag")
 	flag.StringVar(&c.checkApp, "e", "", "Execute and print result of a check app")
+	flag.BoolVar(&c.listApps, "l", false, "List executable app names (one per line)")
+	flag.BoolVar(&c.listAppsDetailed, "L", false, "List all executable apps with detailed information")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
@@ -36,20 +48,32 @@ func (c *CLI) ParseArgs() {
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s -f config.json                    # Launch all apps\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -t web,backend     # Launch apps with web or backend tags\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -c myapp           # Launch only 'myapp'\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -g production      # Launch all apps tagged 'production'\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -e checkapp        # Test a check app\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -v                 # Launch with verbose logging\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -f config.json -r                 # Dry-run mode\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s                                   # Launch all apps (uses ~/.gomcc.json)\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -l                                # List executable app names\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -L                                # List executable apps with details\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -f config.json                    # Launch all apps with specific config\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -t web,backend                    # Launch apps with web or backend tags\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -c myapp                          # Launch only 'myapp'\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -g production                     # Launch all apps tagged 'production'\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -e checkapp                       # Test a check app\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -v                                # Launch with verbose logging\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -r                                # Dry-run mode\n", os.Args[0])
 	}
 
 	flag.Parse()
 
-	// Validate required arguments
+	// Check if any action is specified
+	hasAction := c.listApps || c.listAppsDetailed || c.checkApp != "" || c.appName != "" || c.groupTag != "" || len(flag.Args()) > 0
+	
+	// If no action specified and no other arguments, show usage
+	if !hasAction && flag.NFlag() == 0 {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	// Validate config file path
 	if c.configPath == "" {
-		fmt.Fprintf(os.Stderr, "Error: config file path (-f) is required\n\n")
+		fmt.Fprintf(os.Stderr, "Error: config file path not specified and no default found\n\n")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -87,6 +111,19 @@ func (c *CLI) GetTagsList() []string {
 	return result
 }
 
+// equalStringSlices compares two string slices for equality
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func main() {
 	cli := &CLI{}
 	cli.ParseArgs()
@@ -100,6 +137,110 @@ func main() {
 
 	// Create executor
 	executor := NewExecutor(config, cli.GetLogLevel(), cli.dryRun)
+
+	// Handle list apps mode (simple - just names)
+	if cli.listApps {
+		tags := cli.GetTagsList()
+		var appsToList []App
+		
+		if cli.appName != "" {
+			// List specific app
+			app := config.GetApp(cli.appName)
+			if app == nil {
+				fmt.Fprintf(os.Stderr, "Error: app '%s' not found\n", cli.appName)
+				os.Exit(1)
+			}
+			appsToList = []App{*app}
+		} else if cli.groupTag != "" {
+			// List apps with specific tag
+			appsToList = config.GetAppsByTag(cli.groupTag)
+		} else if len(tags) > 0 {
+			// List apps filtered by tags
+			appsToList = config.GetAppsByTags(tags)
+		} else {
+			// List all apps
+			appsToList = config.Apps
+		}
+		
+		// Print only executable names, one per line
+		for _, app := range appsToList {
+			if app.Type == TypeExecutable {
+				fmt.Println(app.Name)
+			}
+		}
+		os.Exit(0)
+	}
+
+	// Handle list apps mode (detailed)
+	if cli.listAppsDetailed {
+		tags := cli.GetTagsList()
+		var appsToList []App
+		
+		if cli.appName != "" {
+			// List specific app
+			app := config.GetApp(cli.appName)
+			if app == nil {
+				fmt.Fprintf(os.Stderr, "Error: app '%s' not found\n", cli.appName)
+				os.Exit(1)
+			}
+			appsToList = []App{*app}
+		} else if cli.groupTag != "" {
+			// List apps with specific tag
+			appsToList = config.GetAppsByTag(cli.groupTag)
+		} else if len(tags) > 0 {
+			// List apps filtered by tags
+			appsToList = config.GetAppsByTags(tags)
+		} else {
+			// List all apps
+			appsToList = config.Apps
+		}
+		
+		fmt.Println("Executable Apps:")
+		fmt.Println("================")
+		count := 0
+		for _, app := range appsToList {
+			if app.Type == TypeExecutable {
+				count++
+				fmt.Printf("\nName: %s\n", app.Name)
+				if len(app.Tags) > 0 {
+					fmt.Printf("  Tags: %s\n", strings.Join(app.Tags, ", "))
+				}
+				
+				// Resolve command based on dependencies
+				cmd, args, err := executor.ResolveCommand(&app)
+				if err != nil {
+					fmt.Printf("  Command: %s %s (error: %v)\n", app.Command, strings.Join(app.Args, " "), err)
+				} else {
+					if cmd != app.Command || !equalStringSlices(args, app.Args) {
+						fmt.Printf("  Default Command: %s %s\n", app.Command, strings.Join(app.Args, " "))
+						fmt.Printf("  Resolved Command: %s %s\n", cmd, strings.Join(args, " "))
+					} else {
+						fmt.Printf("  Command: %s %s\n", cmd, strings.Join(args, " "))
+					}
+				}
+				
+				if len(app.Dependencies) > 0 {
+					fmt.Printf("  Dependencies:\n")
+					for depName, action := range app.Dependencies {
+						fmt.Printf("    - %s\n", depName)
+						if action.OnSuccess != "" {
+							fmt.Printf("        on_success: %s\n", action.OnSuccess)
+						}
+						if action.OnFailure != "" {
+							fmt.Printf("        on_failure: %s\n", action.OnFailure)
+						}
+					}
+				}
+			}
+		}
+		
+		if count == 0 {
+			fmt.Println("\nNo executable apps found.")
+		} else {
+			fmt.Printf("\nTotal: %d executable app(s)\n", count)
+		}
+		os.Exit(0)
+	}
 
 	// Handle check app mode
 	if cli.checkApp != "" {

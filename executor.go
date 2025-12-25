@@ -112,6 +112,11 @@ func (e *Executor) PrintCheckResult(app *App) error {
 	}
 }
 
+// ResolveCommand is the public version of resolveCommand
+func (e *Executor) ResolveCommand(app *App) (string, []string, error) {
+	return e.resolveCommand(app)
+}
+
 // resolveCommand determines the actual command to execute based on dependencies
 func (e *Executor) resolveCommand(app *App) (string, []string, error) {
 	if len(app.Dependencies) == 0 {
